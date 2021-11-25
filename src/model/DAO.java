@@ -1,12 +1,18 @@
 package model;
 
+import main.AppProperties;
+import org.sqlite.JDBC;
+
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * Data access object (DAO) is a pattern that provides an abstract interface to some type of database or other persistence mechanism.
  */
 public class DAO {
-	private static boolean loged = ApplicationProperties.propertyEqual("db_log", "true");
+	private static boolean logged = AppProperties.propertiesEqual("dataBaseLogs", "true");
 	private static String LOGIN = "login";
 	private static String PASSWORD = "password";
 	private static String ID = "id";
@@ -36,7 +42,42 @@ public class DAO {
 					"'" + HELM + "' text);";
 
 	private static Connection connection;
-	private StringBuilder request;
+	private StringBuilder request; // TODO прочитать про класс StringBuilder
+
+	/**
+	 * В методе switchOnConnetction создаётся база данных.
+	 * JDBC установлена зависимость установлена в pom.xml
+	 * @throws SQLException
+	 */
+
+	public synchronized void switchOnConnetction() throws SQLException {
+		if (connection == null) {
+			DriverManager.registerDriver(new JDBC());
+			connection = DriverManager.getConnection("jdbc:sqlite:" + AppProperties.getProperties("dataBasePath"));
+		}
+		if (logged) {
+			System.out.println("Data Base has connected");
+		}
+	}
+
+	public DAO() throws SQLException {
+		switchOnConnetction();
+		if (AppProperties.propertiesEqual("profile", "test")) {
+			dropPlayersTable();
+			createPlayersTable();
+		}
+	}
+
+	private void createPlayersTable() {
+	}
+
+	private void dropPlayersTable() {
+		try(PreparedStatement statement = connection.prepareStatement(DROP_TABLE_QUERY)) {
+
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+	}
 
 
 }
