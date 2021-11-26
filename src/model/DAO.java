@@ -2,17 +2,15 @@ package model;
 
 import main.AppProperties;
 import org.sqlite.JDBC;
+import sun.net.www.ApplicationLaunchException;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 
 /**
  * Data access object (DAO) is a pattern that provides an abstract interface to some type of database or other persistence mechanism.
  */
 public class DAO {
-	private static boolean logged = AppProperties.propertiesEqual("dataBaseLogs", "true");
+	private static boolean logSwitch = AppProperties.propertiesEqual("dataBaseLogs", "true");
 	private static String LOGIN = "login";
 	private static String PASSWORD = "password";
 	private static String ID = "id";
@@ -32,8 +30,8 @@ public class DAO {
 					"'" + PASSWORD + "' text, " +
 					"'" + TYPE + "' text, " + // константы типа определены в Warrior
 					"'" + LEVEL + "' INT, " +
-					"'" + EXP + "' INT, " +
-					"'" + HP + "' INT, " +
+					"'" + XP + "' INT, " +
+					"'" + HEALTH + "' INT, " +
 					"'" + ATTACK + "' INT, " +
 					"'" + DEFENSE + "' INT, " +
 					"'" + HIT_POINTS + "' INT, " +
@@ -55,7 +53,7 @@ public class DAO {
 			DriverManager.registerDriver(new JDBC());
 			connection = DriverManager.getConnection("jdbc:sqlite:" + AppProperties.getProperties("dataBasePath"));
 		}
-		if (logged) {
+		if (logSwitch) {
 			System.out.println("Data Base has connected");
 		}
 	}
@@ -63,21 +61,85 @@ public class DAO {
 	public DAO() throws SQLException {
 		switchOnConnetction();
 		if (AppProperties.propertiesEqual("profile", "test")) {
-			dropPlayersTable();
-			createPlayersTable();
+			dropHeroesTable();
+			createHeroesTable();
+			addHeroesInfo();
+			readHeroesTable();
 		}
 	}
 
-	private void createPlayersTable() {
-	}
-
-	private void dropPlayersTable() {
-		try(PreparedStatement statement = connection.prepareStatement(DROP_TABLE_QUERY)) {
-
+	private void createHeroesTable() {
+		try(PreparedStatement statement = connection.prepareStatement(CREATE_TABLE_QUERY)) {
+			statement.execute();
+			if (logSwitch) {
+				System.out.println("Table of heroes has created");
+			}
 		} catch (SQLException throwables) {
+			if (logSwitch) {
+				System.out.println("Excuse me. Attempt to create a table of heroes has failed.\nPlease, check configuartions of files and pom dependencies.");
+			}
 			throwables.printStackTrace();
 		}
 	}
 
+	private void dropHeroesTable() {
+		try(PreparedStatement statement = connection.prepareStatement(DROP_TABLE_QUERY)) {
+			statement.execute();
+			if (logSwitch) {
+				System.out.println("Table of heroes has deleted.");
+			}
+		} catch (SQLException throwables) {
+			if (logSwitch) {
+				System.out.println("Excuse me. Attemp to drop the table of heroes" +
+						"has failed.\nPlease, check data at the database and configurations of connection.");
+			}
+			throwables.printStackTrace();
+		}
+	}
+	//FIXME добавить возможность самому внести имя игрока
+	private void addHeroesInfo() {
+		Hero player = HeroesFabric.createPlayer("bublik", HeroClass.Bublik);
+		//TODO добавить типы игроков - бублик,  коржик, кекс
+		player.setExperience(0);
+		player.setLevel(5);
+		createHero(player.getName(),
+				"_" + player.getName + "_",
+				player);
+
+		player = HeroesFabric.createPlayer("Korzhik", HeroClass.Korzhik);
+		createHero(player.getName(),
+				"_" + player.getName + "_",
+				player);
+		player = HeroesFabric.createPlayer("Keks", HeroClass.Keks);
+		createHero(player.getName(),
+				"_" + player.getName + "_",
+				player);
+		if (logSwitch) {
+			System.out.println("Player has added to database successfuly.");
+		}
+	}
+
+	private void readHeroesTable() {
+		if (logSwitch == false)
+			return;
+		try (PreparedStatement statement = connection.prepareStatement(SELECT_QUERY_ALL)) {
+			// TODO Узнать что есть ResultSet
+			ResultSet resultSet = statement.executeQuery();
+			while (resultSet.next()) {
+				System.out.printf("ID is " + resultSet.getId(ID) + "");
+				System.out.printf("\tlogin is " + resultSet.getLogin(LOGIN));
+				System.out.printf("\tpassword = " + resultSet.getPassword(PASSWORD));
+				System.out.printf("\texperience = " + resultSet.getInt(XP));
+				System.out.printf("\nhealth = " + resultSet.getInt(HEALTH));
+				System.out.printf("\tattack power = " + resultSet.getInt(ATTACK));
+				System.out.printf("\tdefence = " + resultSet.getInt(DEFENCE));
+				System.out.printf("\thelmet");
+			}
+
+		} catch (SQLException throwables) {
+			System.out.println("Have fail to read database.\nPlease, check connection and file of configurations.");
+			throwables.printStackTrace();
+		}
+	}
 
 }
